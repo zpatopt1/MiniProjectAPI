@@ -110,21 +110,22 @@ app.get('/dashboard', (req, res) => {
 
   // Consulta para obter os top 5 jogadores com mais registros de controle por competição
   const query2 = `
-    SELECT TOP 5 a.nome, COUNT(t.id_controlo) AS num_testes
-    FROM atleta AS a
-    JOIN controlo AS c ON a.CC_atleta = c.CC_atleta
-    JOIN teste_dopagem AS t ON c.id_controlo = t.id_controlo
-    GROUP BY a.nome
-    ORDER BY num_testes DESC;
+  SELECT ca.nome AS nome_campeonato, a.nome AS nome_atleta, COUNT(c.id_controlo) AS total_registros
+  FROM atleta a
+  JOIN controlo c ON a.CC_atleta = c.CC_atleta
+  JOIN campeonato ca ON c.id_campeonato = ca.id_campeonato
+  GROUP BY ca.nome, a.nome
+  ORDER BY ca.nome, total_registros DESC;
   `;
 
   // Consulta para obter os top 10 jogadores com menos registros de controle por equipe
   const query3 = `
-    SELECT TOP 10 a.nome, COUNT(c.id_controlo) AS num_testes
-    FROM atleta AS a
-    JOIN controlo AS c ON a.CC_atleta = c.CC_atleta
-    JOIN clube AS cl ON a.id_clube = cl.id_clube
-    GROUP BY a.nome
+    SELECT TOP 10 a.nome AS nome_atleta, e.nome AS nome_equipa, COUNT(c.id_controlo) AS num_testes
+    FROM atleta a
+    JOIN controlo c ON a.CC_atleta = c.CC_atleta
+    JOIN clube cl ON a.id_clube = cl.id_clube
+    JOIN equipa e ON cl.id_equipa = e.id_equipa
+    GROUP BY a.nome, e.nome
     HAVING COUNT(c.id_controlo) > 0
     ORDER BY num_testes ASC;
   `;
@@ -182,10 +183,10 @@ app.get('/dashboard', (req, res) => {
     });
 });
   
-//APP DESKTOP
+//APP DESKTOP //possivel erro tested_players/competition
 //Lista de jogadores testados numa dada competição (NOME DA COMPETIÇÃO) indicando a clínica e o profissional de saúde responsável pela colheita
 //POSIVEL ERRO
-app.get('/tested-players/:competition', (req, res) => {
+app.get('/tested-players/competition', (req, res) => {
     const { competition } = req.params;
   
     const query = `
