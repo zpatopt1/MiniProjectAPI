@@ -44,32 +44,32 @@ app.post('/players', (req, res) => {
       });
   });
 // API endpoint para atualizar um jogador
-app.put('/players/:id', (req, res) => {
-    const { id } = req.params;
-    const { id_clube, nome, ativo, dt_nasc } = req.body;
-  
-    sql.connect(config)
-      .then(pool => {
-        const query = `
-          UPDATE atleta
-          SET id_clube = ${id_clube}, nome = '${nome}', ativo = ${ativo}, dt_nasc = '${dt_nasc}'
-          WHERE cc_atleta = ${id};
-        `;
-  
-        return pool.request().query(query);
-      })
-      .then(result => {
-        if (result.rowsAffected[0] === 0) {
-          return res.status(404).json({ error: 'Jogador não encontrado' });
-        }
-  
-        res.json({ message: 'Jogador atualizado com sucesso' });
-      })
-      .catch(err => {
-        console.error('Erro:', err);
-        res.status(500).json({ error: 'Ocorreu um erro' });
-      });
-  });
+app.put('/players', (req, res) => {
+  const { cc_atleta, id_clube, nome, ativo, dt_nasc } = req.body;
+
+  sql.connect(config)
+    .then(pool => {
+      const query = `
+        UPDATE atleta
+        SET id_clube = ${id_clube}, nome = '${nome}', ativo = ${ativo}, dt_nasc = '${dt_nasc}'
+        WHERE cc_atleta = ${cc_atleta};
+      `;
+
+      return pool.request().query(query);
+    })
+    .then(result => {
+      if (result.rowsAffected[0] === 0) {
+        return res.status(404).json({ error: 'Jogador não encontrado' });
+      }
+
+      res.json({ message: 'Jogador atualizado com sucesso' });
+    })
+    .catch(err => {
+      console.error('Erro:', err);
+      res.status(500).json({ error: 'Ocorreu um erro' });
+    });
+});
+
 //API endpoint para remover um jogador
 app.delete('/players/:id', (req, res) => {
     const { id } = req.params;
