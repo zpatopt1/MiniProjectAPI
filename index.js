@@ -316,34 +316,53 @@ app.get('/top-positive-substances', (req, res) => {
       });
   });
 
-
-        //VER DEPOIS TALVEZ POST INICIO , FIM
-        // Rota para obter a lista de jogadores testados em um intervalo de tempo
-        app.get('/players-tested/:start/:end', (req, res) => {
-            const { start, end } = req.params;
-        
-            const query = `
-            SELECT a.nome AS nome_jogador, s.nome AS nome_substancia, rt.resultado AS resultado_teste
-            FROM atleta AS a
-            JOIN controlo AS c ON a.CC_atleta = c.CC_atleta
-            JOIN teste_dopagem AS t ON c.id_controlo = t.id_controlo
-            JOIN resultado_teste AS rt ON t.id_teste = rt.id_teste
-            JOIN substancia AS s ON rt.id_substancia = s.id_substancia
-            WHERE t.dt_colheita >= '${start}' AND t.dt_colheita <= '${end}';
-            `;
-        
-            sql.connect(config)
-            .then(pool => {
-                return pool.request().query(query);
-            })
-            .then(result => {
-                res.json(result.recordset);
-            })
-            .catch(err => {
-                console.error('Erro:', err);
-                res.status(500).json({ error: 'Ocorreu um erro' });
-            });
-        });
+  //Rota para sorteio dos 5 jogadores que serão controlados na próxima semana 
+  app.get('/random-players-control-next-week', (req, res) => {
+    const query = `
+    SELECT TOP 5 CC_atleta, nome
+    FROM atleta
+    WHERE ativo = 1
+    ORDER BY NEWID();    
+    `;
+  
+    sql.connect(config)
+      .then(pool => {
+        return pool.request().query(query);
+      })
+      .then(result => {
+        res.json(result.recordset);
+      })
+      .catch(err => {
+        console.error('Erro:', err);
+        res.status(500).json({ error: 'Ocorreu um erro' });
+      });
+  });
+  app.get('/players-tested/:days', (req, res) => {
+    const { days } = req.params;
+  
+    const query = `
+      SELECT a.nome AS nome_jogador, s.nome AS nome_substancia, r.resultado AS resultado_teste
+      FROM atleta AS a
+      JOIN controlo AS c ON a.CC_atleta = c.CC_atleta
+      JOIN teste_dopagem AS td ON c.id_controlo = td.id_controlo
+      JOIN resultado AS r ON td.id_teste = r.id_teste
+      JOIN substanciasDoping AS s ON r.id_substancia = s.id_substancia
+      WHERE td.dt_teste >= DATEADD(DAY, -${days}, GETDATE()) AND td.dt_teste <= GETDATE();
+    `;
+  
+    sql.connect(config)
+      .then(pool => {
+        return pool.request().query(query);
+      })
+      .then(result => {
+        res.json(result.recordset);
+      })
+      .catch(err => {
+        console.error('Erro:', err);
+        res.status(500).json({ error: 'Ocorreu um erro' });
+      });
+  });
+  
         
 // Iniciar o servidor
 app.listen(3000, () => {
