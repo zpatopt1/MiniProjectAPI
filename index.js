@@ -44,8 +44,9 @@ app.post('/players', (req, res) => {
       });
   });
 // API endpoint para atualizar um jogador
-app.put('/players', (req, res) => {
-  const { cc_atleta, id_clube, nome, ativo, dt_nasc } = req.body;
+app.put('/players/:cc_atleta', (req, res) => {
+  const cc_atleta = req.params.cc_atleta;
+  const { id_clube, nome, ativo, dt_nasc } = req.body;
 
   sql.connect(config)
     .then(pool => {
@@ -69,6 +70,7 @@ app.put('/players', (req, res) => {
       res.status(500).json({ error: 'Ocorreu um erro' });
     });
 });
+
 
 //API endpoint para remover um jogador
 app.delete('/players/:id', (req, res) => {
