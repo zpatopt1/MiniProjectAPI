@@ -43,6 +43,30 @@ app.post('/players', (req, res) => {
         res.status(500).json({ error: 'Ocorreu um erro' });
       });
   });
+  //adicionar clube
+  app.post('/clube', (req, res) => {
+    const {nome, id_equipa} = req.body;
+  
+    console.log(req.body); // Exibir o conteúdo do req.body no console
+  
+    sql.connect(config)
+      .then(pool => {
+        const query = `
+          INSERT INTO clube (id_equipa, nome)
+          VALUES (${id_equipa},'${nome}');
+        `;
+  
+        return pool.request().query(query);
+      })
+      .then(result => {
+        res.json({ message: 'clube adicionado com sucesso' });
+      })
+      .catch(err => {
+        console.error('Erro:', err);
+        res.status(500).json({ error: 'Ocorreu um erro' });
+      });
+  });
+
 // API endpoint para atualizar um jogador
 app.put('/players/:cc_atleta', (req, res) => {
   const cc_atleta = req.params.cc_atleta;
@@ -188,7 +212,7 @@ app.get('/dashboard', (req, res) => {
 //APP DESKTOP //possivel erro tested_players/competition
 //Lista de jogadores testados numa dada competição (NOME DA COMPETIÇÃO) indicando a clínica e o profissional de saúde responsável pela colheita
 //POSIVEL ERRO
-app.get('/tested-players/competition', (req, res) => {
+app.get('/tested-players/:competition', (req, res) => {
     const { competition } = req.params;
   
     const query = `
@@ -214,6 +238,7 @@ app.get('/tested-players/competition', (req, res) => {
         res.status(500).json({ error: 'Ocorreu um erro' });
       });
   });
+
 // Rota para obter a lista de jogadores que testaram positivo a substância dopante
 app.get('/positive-players', (req, res) => {
     const query = `
@@ -244,9 +269,44 @@ app.get('/positive-players', (req, res) => {
         res.status(500).json({ error: 'Ocorreu um erro' });
       });
   });
+
+  //LISTA DE JOGADORES POSITIVOS COM DATA DE INCIO E DATA FIM
+  app.get('/positive-players/:start_date/:end_date', (req, res) => {
+  const { start_date, end_date } = req.params;
+
+  const query = `
+    SELECT a.nome AS nome_jogador, cl.nome AS nome_clube, e.nome AS nome_equipa,
+    td.dt_teste AS data_colheita, t.dt_teste AS data_teste, lab.nome AS laboratorio,
+    s.nome AS substancia_positiva
+    FROM atleta AS a
+    JOIN controlo AS c ON a.CC_atleta = c.CC_atleta
+    JOIN clube AS cl ON a.id_clube = cl.id_clube
+    JOIN equipa AS e ON cl.id_equipa = e.id_equipa
+    JOIN teste_dopagem AS td ON c.id_controlo = td.id_controlo
+    JOIN resultado AS r ON td.id_teste = r.id_teste
+    JOIN substanciasDoping AS s ON r.id_substancia = s.id_substancia
+    JOIN laboratorio AS lab ON td.id_laboratorio = lab.id_laboratorio
+    JOIN teste_dopagem AS t ON r.id_teste = t.id_teste
+    WHERE r.resultado = 'Positivo' AND td.dt_teste BETWEEN '${start_date}' AND '${end_date}';
+  `;
+
+  sql.connect(config)
+    .then(pool => {
+      return pool.request().query(query);
+    })
+    .then(result => {
+      res.json(result.recordset);
+    })
+    .catch(err => {
+      console.error('Erro:', err);
+      res.status(500).json({ error: 'Ocorreu um erro' });
+    });
+});
+
+
 // Lista de jogadores testados por competição e a quantidade e percentagem de testes de controlo positivos
 app.get('/competition-tested-players', (req, res) => {
-    const query = `
+  const query = `
     SELECT camp.nome AS nome_competicao, COUNT(DISTINCT a.CC_atleta) AS quantidade_testados,
         SUM(CASE WHEN r.resultado = 'Positivo' THEN 1 ELSE 0 END) AS quantidade_positivos,
         (SUM(CASE WHEN r.resultado = 'Positivo' THEN 1 ELSE 0 END) / COUNT(DISTINCT a.CC_atleta)) * 100 AS percentagem_positivos
@@ -256,20 +316,21 @@ app.get('/competition-tested-players', (req, res) => {
     JOIN teste_dopagem AS td ON c.id_controlo = td.id_controlo
     JOIN resultado AS r ON td.id_teste = r.id_teste
     GROUP BY camp.nome;
-    `;
-  
-    sql.connect(config)
-      .then(pool => {
-        return pool.request().query(query);
-      })
-      .then(result => {
-        res.json(result.recordset);
-      })
-      .catch(err => {
-        console.error('Erro:', err);
-        res.status(500).json({ error: 'Ocorreu um erro' });
-      });
-  });  
+  `;
+
+  sql.connect(config)
+    .then(pool => {
+      return pool.request().query(query);
+    })
+    .then(result => {
+      res.json(result.recordset);
+    })
+    .catch(err => {
+      console.error('Erro:', err);
+      res.status(500).json({ error: 'Ocorreu um erro' });
+    });
+});
+
 // Rota para obter a lista de laboratórios com a quantidade de testes realizados e a quantidade de testes positivos
 app.get('/labs-tested', (req, res) => {
     const query = `
@@ -294,6 +355,7 @@ app.get('/labs-tested', (req, res) => {
         res.status(500).json({ error: 'Ocorreu um erro' });
       });
   });
+
 // Rota para obter a lista das Top 10 substâncias com testes positivos
 app.get('/top-positive-substances', (req, res) => {
     const query = `
@@ -339,6 +401,8 @@ app.get('/top-positive-substances', (req, res) => {
         res.status(500).json({ error: 'Ocorreu um erro' });
       });
   });
+
+  //rota para saber os player nao testados em uma quantidade de dias 
   app.get('/players-tested/:days', (req, res) => {
     const { days } = req.params;
   
@@ -365,7 +429,7 @@ app.get('/top-positive-substances', (req, res) => {
       });
   });
   
-        
+
 // Iniciar o servidor
 app.listen(3000, () => {
   console.log('Servidor ouvindo na porta 3000');
